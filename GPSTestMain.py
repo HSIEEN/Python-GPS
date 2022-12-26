@@ -1,9 +1,8 @@
-##
 import numpy as np
 import tkinter
 import matplotlib.pyplot as plt
 from track_parser import track_parser
-from shift_count import shift_count
+from shift_evaluate import shift_evaluate
 # import track_parser
 from HausdorffDist import HausdorffDist
 import glob
@@ -28,12 +27,12 @@ filelist = [file for file in filelist if file != standard_kml]
 
 std_track, start_lon, start_lat = track_parser(standard_kml)
 
-track_dict = {}
+track_data = {}
 track_dims = {}
 # get trajectory data
 for file in filelist:
-    track_dict[file], __, __ = track_parser(file, start_lon, start_lat)
-    track_dims[file] = track_dict[file].shape
+    track_data[file], __, __ = track_parser(file, start_lon, start_lat)
+    track_dims[file] = track_data[file].shape
 ssd = std_track.shape
 
 std_pad = np.array([std_track[0]])
@@ -57,32 +56,36 @@ if ssd[0] > 1 and ssd[1] == 2:
             # inter
     std_pad = np.append(std_pad, [std_track[-1]], axis=0)
     for file in filelist:
+        n = len(filelist)
         if track_dims[file][0] > 0 and track_dims[file][1] == 2:
-            hd19, mhd19 = HausdorffDist(std_pad, track_dict[file], 'visual')
-            shift = shift_count(std_pad, track_dict[file])
-            track_revised = track_dict[file]+shift
+            hd19, mhd19 = HausdorffDist(std_pad, track_data[file], 'visual')
+            shift = shift_evaluate(std_pad, track_data[file])
+            track_revised = track_data[file]+shift
             hd19R, mhd19R = HausdorffDist(std_pad, track_revised, 'visual')
-            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            print('*******************************************************')
             print('%s:\n' % file[2:-4])
             print('    MAX_ERROR = %.2f(m)\n    MEAN_ERROR = %.2f(m)\n' % (hd19, mhd19))
             print('    shift_lon = %.2f(m)\n    shift_lat = %.2f(m)\n' % (shift[0], shift[1]))
             print('    MAX_ERROR after shift = %.2f(m)\n    MEAN_ERROR after shift = %.2f(m)' % (hd19R, mhd19R))
-            # plt.subplot(1, 2, 1)
-            # plt.plot(std_pad[:, 0], std_pad[:, 1], 'r', linewidth=2, label='Std')
-            # plt.plot(B19_Track[:, 0], B19_Track[:, 1], 'g', linewidth=2, label='B19')
-            # plt.plot(B16_Track[:, 0], B16_Track[:, 1], 'b', linewidth=2, label='B16')
-            # plt.legend()
-            # plt.xlabel('East (m)')
-            # plt.ylabel('North (m)')
-            # plt.title('Three tracks to compare')
+            # plt.subplot(1, n, i)
+            plt.figure()
+            plt.plot(std_pad[:, 0], std_pad[:, 1], 'r', linewidth=2, label='RTK_Track')
+            plt.plot(track_data[file][:, 0], track_data[file][:, 1], 'g', linewidth=2, label=file[2:-4]+'_initial')
+            plt.plot(track_revised[:, 0], track_revised[:, 1], 'b', linewidth=2, label=file[2:-4]+'_Shifted')
+            plt.legend()
+            plt.xlabel('East (m)')
+            plt.ylabel('North (m)')
+            plt.title(file[2:-4])
+            plt.savefig(file[2:-4])
             # plt.subplot(1, 2, 2)
             # b = plt.bar([1, 2, 3], np.array([hd19, hd16, hd1619]))
             # plt.xlabel('1-B19:Std;  2-B16:Std;  3-B19:B16')
             # plt.ylabel('Hausdorff Distance (m)')
             # plt.title('Hausdorff Distance of Three tracks')
-            # plt.show()
+
         else:
             print('Trajectory data does not exist!\n' % ())
+    plt.show()
 else:
     print('Standard Track is NULL!\n' % ())
 print('Press Enter key to exit....')
