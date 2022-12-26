@@ -4,17 +4,40 @@ import matplotlib.pyplot as plt
 
 
 def HausdorffDist(P=None, Q=None, dv=None):
+    # p: standard, Q: measured
     sP = P.shape
     sQ = Q.shape
     if not (sP[1] == sQ[1]):
         raise Exception('Inputs P and Q must have the same number of columns')
-
+    # interpolation for measured data
+    ssd = Q.shape
+    Q_inter = np.array([Q[0]])
+    # Q_inter = np.zeros((1, 2))
+    # interpolation among sparse points
+    if ssd[0] > 1 and ssd[1] == 2:
+        max_inter = 3
+        pad_idx = 0
+        for i in range(1, ssd[0] - 1):
+            pad_num = 1
+            pad_idx = pad_idx + 1
+            Q_inter = np.append(Q_inter, [Q[i]], axis=0)  # Q_inter[pad_idx, :] = Q[i, :]
+            inter = np.sqrt(sum((Q[i] - Q[i + 1]) ** 2))
+            while inter > pad_num * max_inter:
+                pad_num = pad_num + 1
+                pad_idx = pad_idx + 1
+                Q_inter = np.append(
+                    Q_inter, [Q_inter[pad_idx - 1] + (Q[i + 1] - Q[i]) * max_inter / inter],
+                    axis=0)
+                # Q_inter[pad_idx, :] = Q_inter[pad_idx - 1, :] + (Q[i + 1, :] - Q[i, :]) * max_inter /
+                # inter
+        Q_inter = np.append(Q_inter, [Q[-1]], axis=0)
+    sQ = Q_inter.shape
     mp = np.zeros((sP[0], 1))
     ixp = np.ones((sP[0], 1))
     for i in range(0, sP[0]):
         mp[i] = 10000000000.0
         for j in range(0, sQ[0]):
-            dist = np.sqrt(sum((Q[j, :] - P[i, :]) ** 2))
+            dist = np.sqrt(sum((Q_inter[j, :] - P[i, :]) ** 2))
             if mp[i] > dist:
                 mp[i] = dist
                 ixp[i] = j
@@ -24,7 +47,7 @@ def HausdorffDist(P=None, Q=None, dv=None):
     for i in range(0, sQ[0]):
         mq[i] = 10000000000.0
         for j in range(0, sP[0]):
-            dist = np.sqrt(sum((Q[i, :] - P[j, :]) ** 2))
+            dist = np.sqrt(sum((Q_inter[i, :] - P[j, :]) ** 2))
             if mq[i] > dist:
                 mq[i] = dist
                 ixq[i] = j
