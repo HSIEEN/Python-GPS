@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from track_parser import track_parser
 from shift_evaluate import shift_evaluate
 from HausdorffDist import HausdorffDist
+from track_length import track_length
 import glob
 import xlwings as xw
 
@@ -68,12 +69,13 @@ if ssd[0] > 1 and ssd[1] == 2:
     ws.range('A1:G1').color = (255, 217, 100)
     ws.range('A1:G1').column_width = 20
     ws.range('A1:G100').api.HorizontalAlignment = -4108
+    ws.range('A2:A100').api.HorizontalAlignment = -4131
     row = 1
     for file in filelist:
         n = len(filelist)
         if track_dims[file][0] > 0 and track_dims[file][1] == 2:
-            row = row+1
-            ws.range('A'+str(row)).value = file[2:-4]
+            row = row + 1
+            ws.range('A' + str(row)).value = file[2:-4]
             hd19, mhd19 = HausdorffDist(std_pad, track_data[file], 'visual')
             shift = shift_evaluate(std_pad, track_data[file])
             track_revised = track_data[file] + shift
@@ -96,16 +98,16 @@ if ssd[0] > 1 and ssd[1] == 2:
             plt.plot(track_data[file][:, 0], track_data[file][:, 1], 'g', linewidth=2, label='Initial: ' +
                                                                                              'Shift: East=' + str(
                 round(-shift[0], 2)) + 'm, ' + 'North=' + str(round(-shift[1], 2)) + 'm\n' +
-                                                                                             'Max_' + str(
-                round(hd19, 2)) + 'm_Mea_' + str(round(mhd19, 2)) + 'm')
+                                                                                             'Max=' + str(
+                round(hd19, 2)) + 'm, Mea=' + str(round(mhd19, 2)) + 'm')
             plt.plot(track_revised[:, 0], track_revised[:, 1], 'b', linewidth=2, label='Shifted: ' +
-                                                                                       'Max_' + str(
-                round(hd19R, 2)) + 'm_Mea_' + str(round(mhd19R, 2)) + 'm')
+                                                                                       'Max=' + str(
+                round(hd19R, 2)) + 'm, Mea=' + str(round(mhd19R, 2)) + 'm')
             plt.legend()
             plt.xlabel('East (m)')
             plt.ylabel('North (m)')
             plt.title(file[2:-4])
-            plt.savefig(file[2:-4])
+            plt.savefig(file[2:-4]+'.png')
             # plt.subplot(1, 2, 2)
             # b = plt.bar([1, 2, 3], np.array([hd19, hd16, hd1619]))
             # plt.xlabel('1-B19:Std;  2-B16:Std;  3-B19:B16')
@@ -115,6 +117,8 @@ if ssd[0] > 1 and ssd[1] == 2:
         else:
             print('Trajectory data does not exist!\n' % ())
     plt.show()
+    wb.save()
+    xw.App().quit()
 else:
     print('Standard Track is NULL!\n' % ())
 print('Press Enter key to exit....')
