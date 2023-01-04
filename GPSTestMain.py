@@ -6,9 +6,19 @@ from HausdorffDist import HausdorffDist
 from track_length import track_length
 import glob
 import xlwings as xw
+import tkinter as tk
+from tkinter import filedialog
 
-filelist1 = [file for file in glob.glob('./*.kml')]
-filelist2 = [file for file in glob.glob('./*.gpx')]
+root = tk.Tk()
+root.withdraw()
+print('***************请选择要分析的文件目录****************')
+
+file_path = filedialog.askdirectory()
+if file_path == '':
+    print("No directory was chosen, exit")
+    exit()
+filelist1 = [file for file in glob.glob(file_path+'/*.kml')]
+filelist2 = [file for file in glob.glob(file_path+'/*.gpx')]
 filelist = filelist1 + filelist2
 standard_kml = ''
 for file in filelist:
@@ -64,29 +74,36 @@ if ssd[0] > 1 and ssd[1] == 2:
     ws.range('C1').value = '最大距离(m)'
     ws.range('D1').value = '东向偏移(m)'
     ws.range('E1').value = '北向偏移(m)'
-    ws.range('F1').value = '平移后平均距离(m)'
-    ws.range('G1').value = '平移后最大距离(m)'
-    ws.range('A1:G1').color = (255, 217, 100)
-    ws.range('A1:G1').column_width = 20
-    ws.range('A1:G100').api.HorizontalAlignment = -4108
+    ws.range('F1').value = '总偏移量(m)'
+    ws.range('G1').value = '平移后平均距离(m)'
+    ws.range('H1').value = '平移后最大距离(m)'
+    ws.range('I1').value = '图形标号'
+    ws.range('A1:I1').color = (255, 217, 100)
+    ws.range('A1:I1').column_width = 20
+    ws.range('A1:I100').api.HorizontalAlignment = -4108
     ws.range('A2:A100').api.HorizontalAlignment = -4131
     row = 1
     for file in filelist:
         n = len(filelist)
         if track_dims[file][0] > 0 and track_dims[file][1] == 2:
+            file_str = file.split("\\")
+            filename = file_str[-1]
+            filename = filename[:-4]
             row = row + 1
-            ws.range('A' + str(row)).value = file[2:-4]
-            hd19, mhd19 = HausdorffDist(std_pad, track_data[file], 'visual')
+            ws.range('A' + str(row)).value = filename
+            hd19, mhd19 = HausdorffDist(std_pad, track_data[file])
             shift = shift_evaluate(std_pad, track_data[file])
             track_revised = track_data[file] + shift
-            hd19R, mhd19R = HausdorffDist(std_pad, track_revised, 'visual')
+            hd19R, mhd19R = HausdorffDist(std_pad, track_revised)
             # write_data(filename, )
             ws.range('B' + str(row)).value = str(round(mhd19, 2))
             ws.range('C' + str(row)).value = str(round(hd19, 2))
             ws.range('D' + str(row)).value = str(round(-shift[0], 2))
             ws.range('E' + str(row)).value = str(round(-shift[1], 2))
-            ws.range('F' + str(row)).value = str(round(mhd19R, 2))
-            ws.range('G' + str(row)).value = str(round(hd19R, 2))
+            ws.range('F' + str(row)).value = str(round(np.sqrt(shift[0] ** 2 + shift[1] ** 2), 2))
+            ws.range('G' + str(row)).value = str(round(mhd19R, 2))
+            ws.range('H' + str(row)).value = str(round(hd19R, 2))
+            ws.range('I' + str(row)).value = str('Figure ' + str(row - 1))
             print('*******************************************************')
             print('%s:\n' % file[2:-4])
             print('    MAX_ERROR = %.2f(m)\n    MEAN_ERROR = %.2f(m)\n' % (hd19, mhd19))
@@ -106,8 +123,8 @@ if ssd[0] > 1 and ssd[1] == 2:
             plt.legend()
             plt.xlabel('East (m)')
             plt.ylabel('North (m)')
-            plt.title(file[2:-4])
-            plt.savefig(file[2:-4]+'.png')
+            plt.title(filename)
+            plt.savefig(filename + '.png')
             # plt.subplot(1, 2, 2)
             # b = plt.bar([1, 2, 3], np.array([hd19, hd16, hd1619]))
             # plt.xlabel('1-B19:Std;  2-B16:Std;  3-B19:B16')
@@ -116,11 +133,9 @@ if ssd[0] > 1 and ssd[1] == 2:
 
         else:
             print('Trajectory data does not exist!\n' % ())
-    plt.show()
     wb.save()
     xw.App().quit()
+    plt.show(block=True)
 else:
     print('Standard Track is NULL!\n' % ())
-print('Press Enter key to exit....')
-input()
-exit()
+
