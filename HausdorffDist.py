@@ -3,7 +3,7 @@ import math as mt
 import matplotlib.pyplot as plt
 
 
-def HausdorffDist(P=None, Q=None, dv=None):
+def HausdorffDist(P=None, Q=None):
     # p: standard, Q: measured
     sP = P.shape
     sQ = Q.shape
@@ -41,7 +41,8 @@ def HausdorffDist(P=None, Q=None, dv=None):
     #         if mp[i] > dist:
     #             mp[i] = dist
     #             ixp[i] = j
-
+    shift_vector = np.zeros((sQ[0], 2))
+    n = 0
     mq = np.zeros((sQ[0], 1))
     ixq = np.ones((sQ[0], 1))
     for i in range(0, sQ[0]):
@@ -51,18 +52,15 @@ def HausdorffDist(P=None, Q=None, dv=None):
             if mq[i] > dist:
                 mq[i] = dist
                 ixq[i] = j
+                shift_vector[i, :] = Q[i, :] - P[j, :]
 
-    # vp = np.mean(mp)
-
+    # shift vector calculation
+    average_shift_vector = np.average(shift_vector, axis=0)
+    # average Hausdorff distance
     vq = np.mean(mq)
 
-    # mhd = max(vp, vq)
-    # maxp = np.amax(mp)
-    # maxp, ixpp = np.amax(mp)
+    # Hausdorff distance in definition
     maxq = np.amax(mq)
-    # maxq, ixqq = np.amax(mq)
-    # hd = np.amax(np.array([maxq, maxp]))
-    ##
     # -- plot data --
     #
     # if P is not None and Q is not None and dv is not None and (
@@ -93,4 +91,4 @@ def HausdorffDist(P=None, Q=None, dv=None):
     # plt.title(np.array([[np.array(['Max Distance = ',num2str(hd)])],[np.array(['Mean Distance = ',num2str(mhd)])],[[]]]))
     # plt.legend(h,np.array(['P','Q','Maximum Dist']),'location','eastoutside')
 
-    return maxq, vq
+    return maxq, vq, average_shift_vector
