@@ -8,6 +8,7 @@ import glob
 import xlwings as xw
 import tkinter as tk
 from tkinter import filedialog
+from shift_evaluate2 import shift_evaluate2
 
 root = tk.Tk()
 root.withdraw()
@@ -17,8 +18,8 @@ file_path = filedialog.askdirectory()
 if file_path == '':
     print("No directory was chosen, exit")
     exit()
-filelist1 = [file for file in glob.glob(file_path+'/*.kml')]
-filelist2 = [file for file in glob.glob(file_path+'/*.gpx')]
+filelist1 = [file for file in glob.glob(file_path + '/*.kml')]
+filelist2 = [file for file in glob.glob(file_path + '/*.gpx')]
 filelist = filelist1 + filelist2
 standard_kml = ''
 for file in filelist:
@@ -66,7 +67,7 @@ if ssd[0] > 1 and ssd[1] == 2:
             # inter
     std_pad = np.append(std_pad, [std_track[-1]], axis=0)
     wb = xw.Book()
-    wb.save('TrajectoryDeviation.xls')
+    wb.save(file_path + '\\' + 'TrajectoryDeviation.xls')
     wb.sheets['Sheet1'].name = 'data'
     ws = wb.sheets['data']
     ws.range('A1').value = '轨迹名称'
@@ -91,32 +92,33 @@ if ssd[0] > 1 and ssd[1] == 2:
             filename = filename[:-4]
             row = row + 1
             ws.range('A' + str(row)).value = filename
-            hd19, mhd19 = HausdorffDist(std_pad, track_data[file])
-            shift = shift_evaluate(std_pad, track_data[file])
-            track_revised = track_data[file] + shift
-            hd19R, mhd19R = HausdorffDist(std_pad, track_revised)
+            hd19, mhd19, shift1 = HausdorffDist(std_pad, track_data[file])
+            shift2 = shift_evaluate(std_pad, track_data[file])
+            shift = shift_evaluate2(std_pad, track_data[file])
+            track_revised = track_data[file] - shift
+            hd19R, mhd19R, _ = HausdorffDist(std_pad, track_revised)
             # write_data(filename, )
             ws.range('B' + str(row)).value = str(round(mhd19, 2))
             ws.range('C' + str(row)).value = str(round(hd19, 2))
-            ws.range('D' + str(row)).value = str(round(-shift[0], 2))
-            ws.range('E' + str(row)).value = str(round(-shift[1], 2))
+            ws.range('D' + str(row)).value = str(round(shift[0], 2))
+            ws.range('E' + str(row)).value = str(round(shift[1], 2))
             ws.range('F' + str(row)).value = str(round(np.sqrt(shift[0] ** 2 + shift[1] ** 2), 2))
             ws.range('G' + str(row)).value = str(round(mhd19R, 2))
             ws.range('H' + str(row)).value = str(round(hd19R, 2))
             ws.range('I' + str(row)).value = str('Figure ' + str(row - 1))
             print('*******************************************************')
-            print('%s:\n' % file[2:-4])
+            print('%s:\n' % filename)
             print('    MAX_ERROR = %.2f(m)\n    MEAN_ERROR = %.2f(m)\n' % (hd19, mhd19))
-            print('    shift_lon = %.2f(m)\n    shift_lat = %.2f(m)\n' % (-shift[0], -shift[1]))
+            print('    shift_lon = %.2f(m)\n    shift_lat = %.2f(m)\n' % (shift[0], shift[1]))
             print('    MAX_ERROR after shift = %.2f(m)\n    MEAN_ERROR after shift = %.2f(m)' % (hd19R, mhd19R))
             # plt.subplot(1, n, i)
             plt.figure()
             plt.plot(std_pad[:, 0], std_pad[:, 1], 'r', linewidth=2, label='RTK_Track')
             plt.plot(track_data[file][:, 0], track_data[file][:, 1], 'g', linewidth=2, label='Initial: ' +
-                                                                                             'Shift: East=' + str(
-                round(-shift[0], 2)) + 'm, ' + 'North=' + str(round(-shift[1], 2)) + 'm\n' +
                                                                                              'Max=' + str(
-                round(hd19, 2)) + 'm, Mea=' + str(round(mhd19, 2)) + 'm')
+                round(hd19, 2)) + 'm, Mea=' + str(round(mhd19, 2)) + 'm\n'
+                                                                     'Shift: East=' + str(
+                round(-shift[0], 2)) + 'm, ' + 'North=' + str(round(-shift[1], 2)) + 'm')
             plt.plot(track_revised[:, 0], track_revised[:, 1], 'b', linewidth=2, label='Shifted: ' +
                                                                                        'Max=' + str(
                 round(hd19R, 2)) + 'm, Mea=' + str(round(mhd19R, 2)) + 'm')
@@ -124,7 +126,7 @@ if ssd[0] > 1 and ssd[1] == 2:
             plt.xlabel('East (m)')
             plt.ylabel('North (m)')
             plt.title(filename)
-            plt.savefig(filename + '.png')
+            plt.savefig(file_path + '\\' + filename + '.png')
             # plt.subplot(1, 2, 2)
             # b = plt.bar([1, 2, 3], np.array([hd19, hd16, hd1619]))
             # plt.xlabel('1-B19:Std;  2-B16:Std;  3-B19:B16')
@@ -138,4 +140,3 @@ if ssd[0] > 1 and ssd[1] == 2:
     plt.show(block=True)
 else:
     print('Standard Track is NULL!\n' % ())
-
